@@ -7,7 +7,6 @@ def example_provider():
     return 1
 
 
-
 def test_injected_function_lets_given_args_pass():
     @pokey.feed
     def example_fn(*, param=pokey.wants(example_provider)):

@@ -2,13 +2,18 @@ from __future__ import annotations
 
 from contextlib import AbstractContextManager, contextmanager
 from contextvars import ContextVar
+from typing import Any, Generic, Mapping, Sequence, TypeVar
 
 import attrs
 from immutables import Map
 
 
+_T = TypeVar("_T")
+_T_co = TypeVar("_T_co", covariant=True)
+
+
 @attrs.define
-class BindingsReference:
+class BindingsReference(Generic[_T_co]):
     _ctx: ContextVar[Map]
 
     @classmethod
@@ -27,14 +32,29 @@ class BindingsReference:
 
     @contextmanager
     def scope(self) -> AbstractContextManager[None]:
-        token = self._ctx.set(self._ctx.get())
+        ctx = self._ctx
+        token = ctx.set(ctx.get())
         try:
             yield
         finally:
             self._ctx.reset(token)
 
-    def set(self, key, val):
-        self._ctx.set(self._ctx.get().set(key, val))
+    def set(self, key: str, val: _T_co) -> None:
+        ctx = self._ctx
+        ctx.set(ctx.get().set(key, val))
 
-    def get(self, key):
+    def set_many(self, kv: Mapping[str, _T_co]) -> None:
+        # TODO: should be changed to update, and should match its signature
+        ctx = self._ctx
+        with ctx.get().mutate() as mm:
+            mm.update(kv)
+            ctx.set(mm.finish())
+
+    def get_many(
+        self, keys: Sequence[str], default: _T = None
+    ) -> dict[str, _T_co | _T]:
+        m = self.bindings
+        return {k: m.get(k, default) for k in keys}
+
+    def get(self, key: str) -> _T_co:
         return self._ctx.get().get(key)

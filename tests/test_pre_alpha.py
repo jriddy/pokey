@@ -54,7 +54,7 @@ def test_can_describe_dependencies_of_injected_fn():
     def example_fn(*, param=pokey.wants(example_provider)):
         return param
 
-    expected = {"param": "test_pre_alpha:example_provider"}
+    expected = {"param": "tests.test_pre_alpha:example_provider"}
     # TODO: better name for this
     assert pokey.slot_names(example_fn) == expected
 
@@ -114,7 +114,9 @@ def test_contextual_rebind():
 
     assert show_binding() == "root"
 
-    with pokey.bind_value("test_pre_alpha:contextual_rebind_root_binding", "override"):
+    with pokey.bind_value(
+        "tests.test_pre_alpha:contextual_rebind_root_binding", "override"
+    ):
         assert show_binding() == "override"
 
     assert show_binding() == "root"

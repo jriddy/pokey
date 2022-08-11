@@ -5,14 +5,7 @@ import inspect
 import pkgutil
 from contextlib import contextmanager
 from contextvars import ContextVar
-from typing import (
-    Callable,
-    ClassVar,
-    Generic,
-    Protocol,
-    TypeVar,
-    runtime_checkable,
-)
+from typing import Callable, ClassVar, Generic, Protocol, TypeVar, runtime_checkable
 
 import attr
 from immutables import Map

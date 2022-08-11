@@ -55,5 +55,5 @@ class BindingsReference(Generic[_T_co]):
         m = self.bindings
         return {k: m.get(k, default) for k in keys}
 
-    def get(self, key: str) -> _T_co:
+    def get(self, key: str) -> _T_co | None:
         return self._ctx.get().get(key)

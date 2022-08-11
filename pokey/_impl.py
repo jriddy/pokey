@@ -6,6 +6,8 @@ from typing import Callable, Protocol, Set, TypeVar, runtime_checkable
 
 import attrs
 
+from ._bindings import BindingsReference
+
 V = TypeVar("V")
 
 
@@ -43,10 +45,18 @@ class FactoryMarker(Resolver[V]):
 Marker = Resolver
 
 
+@attrs.define
+class Tracker:
+    marker: Marker
+
+
+@attrs.define
 class Pokey:
+    ref: BindingsReference[Tracker]
+
     @classmethod
-    def _make_new(cls):
-        return cls()
+    def _make_new(cls, name):
+        return cls(BindingsReference._make(name))
 
     # register the dependency, and return marker that we can use when registering
     # check that registry is compatible/unique (TODO: clarify)
@@ -64,6 +74,8 @@ class Pokey:
             for name, param in sig.parameters.items()
             if isinstance(param.default, Marker)
         }
+        for marker in markers.values():
+            self._register_marker(marker)
 
         @functools.wraps(f)
         def _injection_resolver(*xs, **kw):
@@ -75,6 +87,18 @@ class Pokey:
 
         _injection_resolver.markers = markers
         return _injection_resolver
+
+    def _register_marker(self, marker: Marker) -> None:
+        maybe_tracker = self.ref.get(marker.name)
+        if maybe_tracker is None:
+            # unregistered, we can just add a new tracker
+            self.ref.set(marker.name, Tracker(marker))
+        elif maybe_tracker.marker == marker:
+            # TODO: not sure if we need to do anything here...
+            pass
+        else:
+            # we're trying to register a new function to the same name
+            raise RuntimeError(f"{marker.name!r} already has a root binding")
 
     def slot_names(self, f):
         # TODO: set this on a better attribute/wrapper box

@@ -1,3 +1,5 @@
+import pytest
+
 from pokey import alpha as pokey
 
 
@@ -46,3 +48,21 @@ def test_can_describe_dependencies_of_injected():
 
     expected = {"param": "tests.test_acceptance:example_provider"}
     assert pokey.slot_names(describable_injected_function) == expected
+
+
+def test_cannot_reassign_root_binding():
+    def test_binding_reassignment_factory():
+        ...
+
+    @pokey.injects
+    def ex1(*, param=pokey.wants(test_binding_reassignment_factory)):
+        ...
+
+    def test_binding_reassignment_factory():
+        ...
+
+    with pytest.raises(RuntimeError, match=r"already has a root binding"):
+
+        @pokey.injects
+        def ex1(*, param=pokey.wants(test_binding_reassignment_factory)):  # noqa: F811
+            ...

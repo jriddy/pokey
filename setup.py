@@ -6,7 +6,5 @@ import setuptools
 setuptools.setup(
     name="pokey",
     version="0.1.0dev",
-    install_requires=[
-        x.strip() for x in Path("requirements.txt").open("rt")
-    ],
+    install_requires=[x.strip() for x in Path("requirements.txt").open("rt")],
 )

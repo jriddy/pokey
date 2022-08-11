@@ -1,5 +1,7 @@
 import sys
+
 import pytest
+
 from pokey import pre_alpha as pokey
 
 
@@ -52,12 +54,14 @@ def test_can_describe_dependencies_of_injected_fn():
     def example_fn(*, param=pokey.wants(example_provider)):
         return param
 
+    expected = {"param": "test_pre_alpha:example_provider"}
     # TODO: better name for this
-    assert pokey.slot_names(example_fn) == {"param": "test_pre_alpha:example_provider"}
+    assert pokey.slot_names(example_fn) == expected
 
 
 def test_lambdas_not_allowed_as_wants_first_params():
     with pytest.raises(TypeError, match=r"must be named to create binding"):
+
         @pokey.feed
         def example_fn(*, param=pokey.wants(lambda: 1)):
             ...
@@ -75,8 +79,9 @@ def test_cannot_reassign_binding_via_depedency_declartion():
         ...
 
     with pytest.raises(ValueError, match=r"already has a root binding"):
+
         @pokey.feed
-        def ex1(*, param=pokey.wants(test_binding_reassignment_factory)):
+        def ex1(*, param=pokey.wants(test_binding_reassignment_factory)):  # noqa: F811
             ...
 
 
@@ -121,11 +126,11 @@ def test_contextual_rebind_invalidates_dependent_cached_values():
         return "root"
 
     @pokey.feed
-    def dep_value_middle(value = pokey.wants(dep_value_root)):
+    def dep_value_middle(value=pokey.wants(dep_value_root)):
         return " ".join([value] * 2)
 
     @pokey.feed
-    def dep_value_end(value = pokey.wants(dep_value_middle)):
+    def dep_value_end(value=pokey.wants(dep_value_middle)):
         return value
 
     assert dep_value_end() == "root root"

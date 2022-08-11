@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from contextlib import AbstractContextManager, contextmanager
 from contextvars import ContextVar
-from typing import Any, Generic, Mapping, Sequence, TypeVar
+from typing import Generic, Mapping, Sequence, TypeVar
 
 import attrs
 from immutables import Map
-
 
 _T = TypeVar("_T")
 _T_co = TypeVar("_T_co", covariant=True)

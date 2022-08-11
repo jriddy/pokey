@@ -1,13 +1,9 @@
 import immutables
+import pytest
 
 from pokey._bindings import BindingsReference
 
-import pytest
-
-
-_test_bindings_ref = BindingsReference._make(
-    f"{__name__}._test_bindings_ref"
-)
+_test_bindings_ref = BindingsReference._make(f"{__name__}._test_bindings_ref")
 
 
 @pytest.fixture(scope="session")

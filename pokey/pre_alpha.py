@@ -1,14 +1,21 @@
 from __future__ import annotations
 
-from contextlib import contextmanager
-from contextvars import ContextVar
 import functools
 import inspect
 import pkgutil
-from typing import Any, Callable, ClassVar, Generic, Iterable, Protocol, TypeVar, runtime_checkable
+from contextlib import contextmanager
+from contextvars import ContextVar
+from typing import (
+    Callable,
+    ClassVar,
+    Generic,
+    Protocol,
+    TypeVar,
+    runtime_checkable,
+)
+
 import attr
 from immutables import Map
-
 
 _DEPENDANTS_KEY = "*dependants"
 _bindings_ref: ContextVar[Map] = ContextVar(
@@ -45,7 +52,6 @@ class _FactoryMarker(Generic[_T]):
 
     def reset(self):
         return attr.evolve(self, cached_value=self._UNSET)
-
 
 
 @attr.define
@@ -86,8 +92,7 @@ def _get_markers(f):
     sig = inspect.signature(f)
     return {
         name: param.default
-        for name, param
-        in sig.parameters.items()
+        for name, param in sig.parameters.items()
         if isinstance(param.default, _Marker)
     }
 

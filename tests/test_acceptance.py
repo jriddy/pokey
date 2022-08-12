@@ -84,3 +84,42 @@ def test_cannot_reassign_root_binding():
         @pokey.injects
         def ex1(*, param=pokey.wants(test_binding_reassignment_factory)):  # noqa: F811
             ...
+
+
+def test_simple_recursive_dependency():
+    def simple_recursive_dependency_base() -> list[str]:
+        return "Let's all".split()
+
+    @pokey.injects
+    def simple_recursive_dependency_middle(
+        first_words: list[str] = pokey.wants(simple_recursive_dependency_base),
+    ) -> list[str]:
+        return [*first_words, "have", "a"]
+
+    @pokey.injects
+    def simple_recusrive_dependency_top(
+        more_words: list[str] = pokey.wants(simple_recursive_dependency_middle),
+    ) -> str:
+        return " ".join(more_words + "big party!".split())
+
+    assert simple_recusrive_dependency_top() == "Let's all have a big party!"
+
+
+def test_contextual_rebind():
+    def contextual_rebind_root_binding():
+        return "root"
+
+    @pokey.injects
+    def contextual_rebind_show_binding(
+        value: str = pokey.wants(contextual_rebind_root_binding),
+    ) -> str:
+        return value
+
+    assert contextual_rebind_show_binding() == "root"
+
+    with pokey.bind(
+        {"tests.test_acceptance:contextual_rebind_root_binding": "override"},
+    ):
+        assert contextual_rebind_show_binding() == "override"
+
+    assert contextual_rebind_show_binding() == "root"

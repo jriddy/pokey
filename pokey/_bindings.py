@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from contextlib import AbstractContextManager, contextmanager
 from contextvars import ContextVar
-from typing import Generic, Mapping, Sequence, TypeVar
+from typing import Generic, Iterable, Mapping, TypeVar
 
 import attrs
 from immutables import Map
@@ -50,7 +50,7 @@ class BindingsReference(Generic[_T_co]):
             ctx.set(mm.finish())
 
     def get_many(
-        self, keys: Sequence[str], default: _T = None
+        self, keys: Iterable[str], default: _T = None
     ) -> dict[str, _T_co | _T]:
         m = self.bindings
         return {k: m.get(k, default) for k in keys}

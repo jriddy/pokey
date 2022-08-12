@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import functools
 import inspect
+from contextlib import contextmanager
 from typing import Callable, Generic, Protocol, Set, TypeVar, runtime_checkable
 
 import attrs
@@ -39,6 +40,15 @@ class FactoryMarker(Resolver[V]):
     def resolve(self) -> V:
         # TODO: really do this
         return self.factory()
+
+
+@attrs.frozen
+class ValueMarker(Resolver[V]):
+    name: str
+    value: V
+
+    def resolve(self) -> V:
+        return self.value
 
 
 # TODO: possibly disentangle this
@@ -124,3 +134,18 @@ class Pokey:
     def slot_names(self, f):
         # TODO: set this on a better attribute/wrapper box
         return {k: v.name for k, v in f.markers.items()}
+
+    @contextmanager
+    def bind(self, kv):
+        # TODO: what should we do with unrecognized keys?
+        ref = self.ref
+        with ref.scope():
+            old_trackers = ref.get_many(kv.keys())
+            new_trackers = {
+                k: Tracker(ValueMarker(k, kv[k]))
+                if t is None
+                else t.evolve(marker=ValueMarker(k, kv[k]), value=kv[k])
+                for k, t in old_trackers.items()
+            }
+            ref.set_many(new_trackers)
+            yield

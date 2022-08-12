@@ -123,3 +123,21 @@ def test_contextual_rebind():
         assert contextual_rebind_show_binding() == "override"
 
     assert contextual_rebind_show_binding() == "root"
+
+
+def test_contextual_rebind_invalidates_dependent_cached_values():
+    def dep_value_root():
+        return "root"
+
+    @pokey.injects
+    def dep_value_middle(value=pokey.wants(dep_value_root)):
+        return " ".join([value] * 2)
+
+    @pokey.injects
+    def dep_value_end(value=pokey.wants(dep_value_middle)):
+        return value
+
+    assert dep_value_end() == "root root"
+
+    with pokey.bind({"tests.test_acceptance:dep_value_root": "newval"}):
+        assert dep_value_end() == "newval newval"

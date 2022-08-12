@@ -24,6 +24,9 @@ class Resolver(Protocol[V]):
     def resolve(self) -> V:
         ...
 
+    def dependencies(self) -> Set[str]:
+        ...
+
 
 @attrs.frozen
 class ObviousResolution(Resolution[V]):
@@ -41,6 +44,14 @@ class FactoryMarker(Resolver[V]):
         # TODO: really do this
         return self.factory()
 
+    def dependencies(self) -> Set[str]:
+        deps = set()
+        if is_injected(self.factory):
+            for m in self.factory.markers.values():
+                deps.add(m.name)
+                deps |= m.dependencies()
+        return deps
+
 
 @attrs.frozen
 class ValueMarker(Resolver[V]):
@@ -49,6 +60,9 @@ class ValueMarker(Resolver[V]):
 
     def resolve(self) -> V:
         return self.value
+
+    def dependencies(self) -> Set[str]:
+        return frozenset()
 
 
 # TODO: possibly disentangle this
@@ -65,6 +79,9 @@ class Tracker(Generic[V]):
 
     def cache(self, value: V) -> Tracker[V]:
         return self.evolve(value=value)
+
+    def uncache(self) -> Tracker[V]:
+        return self.evolve(value=...)
 
 
 @attrs.define
@@ -141,11 +158,28 @@ class Pokey:
         ref = self.ref
         with ref.scope():
             old_trackers = ref.get_many(kv.keys())
-            new_trackers = {
-                k: Tracker(ValueMarker(k, kv[k]))
-                if t is None
-                else t.evolve(marker=ValueMarker(k, kv[k]), value=kv[k])
-                for k, t in old_trackers.items()
-            }
+            new_trackers = {}
+            for k, t in old_trackers.items():
+                if t is None:
+                    new_trackers[k] = Tracker(ValueMarker(k, kv[k]))
+                else:
+                    # invalidate all dependant caches
+                    for dk in self._find_dependants(k):
+                        new_trackers[dk] = ref.get(dk).uncache()
+                    new_trackers[k] = t.evolve(marker=ValueMarker(k, kv[k]), value=kv[k])
             ref.set_many(new_trackers)
             yield
+
+    def _find_dependants(self, name: str) -> Set[str]:
+        # TODO: this will be very slow as the number of bindings grows
+        # we need to track dependants separatly if we want to make this practicable
+        return {
+            k for k, v in self.ref.bindings.items()
+            if name in v.marker.dependencies()
+        }
+
+
+@staticmethod
+def is_injected(x: object) -> bool:
+    # TODO: better check
+    return hasattr(x, "markers")

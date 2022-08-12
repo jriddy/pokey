@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 import inspect
 from contextlib import contextmanager
+import pkgutil
 from typing import Callable, Generic, Protocol, Set, TypeVar, runtime_checkable
 
 import attrs
@@ -24,6 +25,7 @@ class Resolver(Protocol[V]):
     def resolve(self) -> V:
         ...
 
+    # Currently defined dependencies only (for now)
     def dependencies(self) -> Set[str]:
         ...
 
@@ -65,6 +67,24 @@ class ValueMarker(Resolver[V]):
         return frozenset()
 
 
+# TODO: redefine to not require mutation
+@attrs.define
+class NamedMarker(Resolver[V]):
+    name: str
+    _imported_marker: Resolver[V] | None = None
+
+    def resolve(self) -> V:
+        if self._imported_marker is None:
+            factory = pkgutil.resolve_name(self.name)
+            # TODO: probably do some validation/checking on factory
+            self._imported_marker = FactoryMarker(self.name, factory)
+        return self._imported_marker.resolve()
+
+    def dependencies(self) -> Set[str]:
+        im = self._imported_marker
+        return frozenset() if im is None else im.dependencies()
+
+
 # TODO: possibly disentangle this
 Marker = Resolver
 
@@ -98,6 +118,8 @@ class Pokey:
     # creates wrappers on wanted functions
     # TODO: Maybe deals with registering dependants?
     def wants(self, x):
+        if isinstance(x, str):
+            return NamedMarker(x)
         return FactoryMarker(f"{x.__module__}:{x.__name__}", x)
 
     # create a wrapper for this function that will fill in missing values when we call

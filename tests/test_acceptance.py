@@ -1,3 +1,5 @@
+import sys
+
 import pytest
 
 from pokey import alpha as pokey
@@ -141,3 +143,15 @@ def test_contextual_rebind_invalidates_dependent_cached_values():
 
     with pokey.bind({"tests.test_acceptance:dep_value_root": "newval"}):
         assert dep_value_end() == "newval newval"
+
+
+def test_import_wanted_name_works():
+    @pokey.injects
+    def load_secret_value(
+        value: str = pokey.wants("tests._simple_test_import:my_dependency"),
+    ):
+        return value
+
+    assert "tests._simple_test_import" not in sys.modules
+    assert load_secret_value() == "super secret value"
+    assert "tests._simple_test_import" in sys.modules

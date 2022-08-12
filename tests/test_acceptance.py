@@ -41,6 +41,24 @@ def test_factory_function_not_called_until_needed():
     assert called
 
 
+def test_factory_function_result_cached():
+    calls = 0
+
+    def factory_function_whose_result_should_be_cached():
+        nonlocal calls
+        calls += 1
+        return "something"
+
+    @pokey.injects
+    def ex(*, param=pokey.wants(factory_function_whose_result_should_be_cached)):
+        return param
+
+    assert ex() == "something"
+    assert calls == 1
+    assert ex() == "something"
+    assert calls == 1
+
+
 def test_can_describe_dependencies_of_injected():
     @pokey.injects
     def describable_injected_function(*, param=pokey.wants(example_provider)):

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import functools
 import inspect
-from typing import Callable, Protocol, Set, TypeVar, runtime_checkable
+from typing import Callable, Generic, Protocol, Set, TypeVar, runtime_checkable
 
 import attrs
 
@@ -45,9 +45,16 @@ class FactoryMarker(Resolver[V]):
 Marker = Resolver
 
 
-@attrs.define
-class Tracker:
+@attrs.frozen
+class Tracker(Generic[V]):
     marker: Marker
+    # TODO: we should probably use a private marker value here
+    value: V | Ellipsis = ...
+
+    evolve = attrs.evolve
+
+    def cache(self, value: V) -> Tracker[V]:
+        return self.evolve(value=value)
 
 
 @attrs.define
@@ -81,12 +88,26 @@ class Pokey:
         def _injection_resolver(*xs, **kw):
             for k, v in markers.items():
                 if k not in kw:
-                    kw[k] = v.resolve()
+                    kw[k] = self._resolve_caching_value(marker)
 
             return f(*xs, **kw)
 
         _injection_resolver.markers = markers
         return _injection_resolver
+
+    def _resolve_caching_value(self, marker: Marker[V]) -> V:
+        key = marker.name
+        # TODO: just getitem here
+        tracker = self.ref.get(key)
+        if tracker is None:
+            raise KeyError(key)
+
+        if tracker.value is ...:
+            value = marker.resolve()
+            tracker = tracker.cache(value)
+            self.ref.set(key, tracker)
+
+        return tracker.value
 
     def _register_marker(self, marker: Marker) -> None:
         maybe_tracker = self.ref.get(marker.name)

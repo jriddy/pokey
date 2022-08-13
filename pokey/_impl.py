@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import functools
 import inspect
-from contextlib import contextmanager
 import pkgutil
+from contextlib import contextmanager
 from typing import Callable, Generic, Protocol, Set, TypeVar, runtime_checkable
 
 import attrs
@@ -188,7 +188,9 @@ class Pokey:
                     # invalidate all dependant caches
                     for dk in self._find_dependants(k):
                         new_trackers[dk] = ref.get(dk).uncache()
-                    new_trackers[k] = t.evolve(marker=ValueMarker(k, kv[k]), value=kv[k])
+                    new_trackers[k] = t.evolve(
+                        marker=ValueMarker(k, kv[k]), value=kv[k]
+                    )
             ref.set_many(new_trackers)
             yield
 
@@ -196,8 +198,7 @@ class Pokey:
         # TODO: this will be very slow as the number of bindings grows
         # we need to track dependants separatly if we want to make this practicable
         return {
-            k for k, v in self.ref.bindings.items()
-            if name in v.marker.dependencies()
+            k for k, v in self.ref.bindings.items() if name in v.marker.dependencies()
         }
 
 

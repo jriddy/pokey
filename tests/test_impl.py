@@ -1,6 +1,8 @@
 import queue
 import random
 import time
+from pprint import pprint
+from threading import Thread
 
 import pytest
 
@@ -72,5 +74,41 @@ def test_threaded_rebinds_dont_interfere(scopey: Pokey) -> None:
             items.append(q.get(False))
         except queue.Empty:
             break
+
+    assert all([expected == actual for expected, actual in items])
+
+
+@pytest.mark.skip(reason="Here for investigating potential cachcing bugs")
+def test_reproduce_subtle_threading_bug_with_trackers(scopey: Pokey) -> None:
+    def my_binding():
+        return "123"
+
+    @scopey.injects
+    def show_binding(bindings, value: str = scopey.wants(my_binding)):
+        pprint(list(map(dict, [scopey.ref.bindings, bindings])))
+        return value
+
+    q = queue.Queue()
+
+    def do_test(rebind_value: str | None):
+        pprint(dict(scopey.ref.bindings))
+        with scopey.bind({"tests.test_impl:my_binding": rebind_value}):
+            q.put((rebind_value, show_binding(scopey.ref.bindings)))
+
+    values = ("abc", "!@#")
+    threads = [Thread(target=do_test, args=(v,)) for v in values]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    items = []
+    while True:
+        try:
+            items.append(q.get(False))
+        except queue.Empty:
+            break
+
+    pprint(items)
 
     assert all([expected == actual for expected, actual in items])

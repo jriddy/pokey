@@ -1,12 +1,11 @@
 import queue
 import random
-import threading
 import time
-from contextvars import copy_context
 
 import pytest
 
 from pokey._impl import Pokey
+from pokey.threads import ContextThread
 
 _test_pokey = Pokey._make_new(f"{__name__}:_test_pokey")
 
@@ -48,8 +47,6 @@ def test_threaded_rebinds_dont_interfere(scopey: Pokey) -> None:
     def show_binding(value: str = scopey.wants(my_binding)):
         return value
 
-    print(dict(scopey.ref.bindings))
-
     q = queue.Queue()
 
     def do_test(rebind_value: str | None):
@@ -62,19 +59,10 @@ def test_threaded_rebinds_dont_interfere(scopey: Pokey) -> None:
                     time.sleep(random.random() / 100000)
                     q.put((rebind_value, show_binding()))
 
-    def run_in_context(ctx, value):
-        ctx.run(do_test, value)
-
     values = (None, "abc", "!@#")
-    # TODO: we need to provide a thread function for this
-    threads = [
-        threading.Thread(target=run_in_context, args=(copy_context(), v))
-        for v in values
-    ]
-    print(len(threads))
+    threads = [ContextThread(target=do_test, args=(v,)) for v in values]
     for thread in threads:
         thread.start()
-
     for thread in threads:
         thread.join()
 
@@ -85,6 +73,4 @@ def test_threaded_rebinds_dont_interfere(scopey: Pokey) -> None:
         except queue.Empty:
             break
 
-    print(items)
-    print(len(items))
     assert all([expected == actual for expected, actual in items])

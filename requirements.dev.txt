@@ -1,2 +1,4 @@
-flake8
-pytest
+flake8 >= 5
+pytest >= 7
+black >= 22
+isort >= 5
